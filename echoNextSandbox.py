@@ -12,13 +12,20 @@ easy_install oauth2
 from pyechonest import config
 from pyechonest import artist
 from pyechonest import song
+from pyechonest import track
+import matplotlib.pyplot as plt
 import oauth2 as oauth
+import sys
+import os
 
+config.ECHO_NEST_API_KEY="J0ILER0LQESUBJQZC"
 consumer_key = '78b970296e8236154d826f956189e336'
 consumer_secret = 'Koge26dJQDSzzSOLPSDvEg'
 consumer = oauth.Consumer(consumer_key, consumer_secret)
 
-# Oauth didnt work for this website
+# Oauth didnt work for this website ===========================================
+#
+#
 #request_url = "http://previews.7digital.com/clip/123456"
 
 #req = oauth.Request(method="GET", url=request_url,is_form_encoded=True)
@@ -31,22 +38,7 @@ consumer = oauth.Consumer(consumer_key, consumer_secret)
 #
 #print req.to_url()
 
-config.ECHO_NEST_API_KEY="J0ILER0LQESUBJQZC"
-
-ss_results = song.search(artist='the national', title='slow show', buckets=['id:7digital-US', 'tracks'], limit=True)
-slow_show = ss_results[0]
-ss_tracks = slow_show.get_tracks('7digital-US')
-print ss_tracks[0].get('preview_url')
-#bk = artist.Artist('bikini kill')
-#print "Artists similar to: %s:" % (bk.name,)
-#for similar_artist in bk.similar: print "\t%s" % (similar_artist.name,)
-
-import sys
-import os
-
-from pyechonest import track
-
-AUDIO_EXTENSIONS = set(['mp3', 'm4a', 'wav', 'ogg', 'au', 'mp4'])
+# Helper functions ============================================================
 
 def _bar(val, ref=100, char='='):
     if val:
@@ -85,11 +77,6 @@ def show_attrs(directory):
             _show_one(path)
 
 
-if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        print 'usage: python show_tempos.py path'
-    else:
-        show_attrs(sys.argv[1])
 def get_tempo(artist, title):
 #    "gets the tempo for a song"
     results = song.search(artist=artist, title=title, results=1, buckets=['audio_summary'])
@@ -98,6 +85,18 @@ def get_tempo(artist, title):
     else:
         return None
 
+def get_allData(artist, title):
+#    gets the various data for a song
+# Use help(song.search) for other useful data
+    results = song.search(artist=artist, title=title, results=1, buckets=['audio_summary'])
+    if len(results) > 0:
+        tempo = results[0].audio_summary['tempo']
+        energy = results[0].audio_summary['energy']
+        valence = results[0].audio_summary['valence']
+        acousticness = results[0].audio_summary['acousticness']
+        return tempo, energy, valence, acousticness
+    else:
+        return None
 def get_energy(artist, title):
 #    "gets the tempo for a song"
     results = song.search(artist=artist, title=title, results=1, buckets=['audio_summary'])
@@ -105,14 +104,47 @@ def get_energy(artist, title):
         return results[0].audio_summary['energy']
     else:
         return None
+        
+# =============================================================================       
+AUDIO_EXTENSIONS = set(['mp3', 'm4a', 'wav', 'ogg', 'au', 'mp4'])
+
+# Example of song searching for song ==========================================
+#ss_results = song.search(artist='the national', title='slow show', buckets=['id:7digital-US', 'tracks'], limit=True)
+#slow_show = ss_results[0]
+#ss_tracks = slow_show.get_tracks('7digital-US')
+#print ss_tracks[0].get('preview_url')
+#bk = artist.Artist('bikini kill')
+#print "Artists similar to: %s:" % (bk.name,)
+#for similar_artist in bk.similar: print "\t%s" % (similar_artist.name,)
 
 
-if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print "Usage: python tempo.py 'artist name' 'song title'"
-    else:
-        tempo = get_tempo(sys.argv[1], sys.argv[2])
-        if tempo:
-            print 'Tempo for', sys.argv[1], sys.argv[2], 'is', tempo
-        else:
-            print "Can't find Tempo for artist:", sys.argv[1], 'song:', sys.argv[2]
+
+#Can only search 100 at a time=================================================
+# searching for country artists
+#d1 = artist.search(style = 'country', results = 100)
+#d2 = artist.search(style = 'country', start = 100, results = 100)
+
+# searching for country songs
+#s1 = song.search(style = 'country', results = 100)
+#s2 = song.search(style = 'country', start = 100, results = 100)
+#==============================================================================
+tempo, energy, valence, acousticness, liveness, speechiness, keys, mM, danceability = [], [], [], [], [], [], [], [], []
+
+# Need to go through each year as can only get 100 entries per search
+noResults = 1000
+for i in range(noResults/100):
+    songs = song.search(style = 'country', buckets = 'audio_summary', start = i*100, results = 100, \
+        artist_start_year_after = 1990, artist_start_year_before = 1995)
+    for theSong in songs:
+        tempo.append(theSong.audio_summary['tempo'])
+        energy.append(theSong.audio_summary['energy'])
+        valence.append(theSong.audio_summary['valence'])
+        acousticness.append(theSong.audio_summary['acousticness'])
+        liveness.append(theSong.audio_summary['liveness'])
+        speechiness.append(theSong.audio_summary['speechiness'])
+        keys.append(theSong.audio_summary['key'])
+        mM.append(theSong.audio_summary['mode'])
+        danceability.append(theSong.audio_summary['danceability'])
+        
+plt.figure(200); plt.clf()
+plt.hist(acousticness, bins = 10)
